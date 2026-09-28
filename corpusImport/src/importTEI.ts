@@ -2,6 +2,7 @@
 import { Client } from "pg";
 import { XMLParser } from "fast-xml-parser";
 import fs from "node:fs";
+import { parseTitleKey } from "./titleKeyParser.ts";
 
 const client = new Client({
   connectionString: "postgres://corpus:corpus@localhost:5432/corpus_dev",
@@ -30,9 +31,19 @@ async function main() {
       : [collection.TEI];
     for (const tei of teiEntries) {
       const titleStmt = tei?.teiHeader?.fileDesc?.titleStmt;
+
+      const titleKeyRaw = titleStmt?.title?.["@_key"] ?? null;
+      const parsed = parseTitleKey(titleKeyRaw);
+
+      if (!parsed.parseOk)
+        console.warn(
+          `Could not parse Q-line for ${tei["@_xml:id"]}: ${titleKeyRaw}`,
+        );
+
       await client.query(
-        `INSERT INTO documents (collection_id, xml_id, title_key, author_key, text_type, lang, raw_xml)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        `INSERT INTO documents (collection_id, xml_id, title_key, author_key, text_type, lang, raw_xml, authenticity, year, year_raw, year_is_decade_suggestion, year_is_uncertain,
+     relationship_code, correspondent_code, title_key_parse_ok)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
           collectionId,
           tei["@_xml:id"] ?? null,
@@ -40,7 +51,15 @@ async function main() {
           titleStmt?.author?.["@_key"] ?? null,
           tei?.text?.["@_type"] ?? null,
           tei?.text?.["@_xml:lang"] ?? null,
-          `<TEI>${JSON.stringify(tei)}</TEI>`, // placeholder — see note below
+          `<TEI>${JSON.stringify(tei)}</TEI>`, // TODO: placeholder — text includes !ENTITY tags for special charachters
+          parsed.authenticity,
+          parsed.year,
+          parsed.yearRaw,
+          parsed.yearIsDecadeSuggestion,
+          parsed.yearIsUncertain,
+          parsed.relationshipCode,
+          parsed.correspondentCode,
+          parsed.parseOk,
         ],
       );
     }

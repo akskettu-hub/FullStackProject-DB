@@ -57,23 +57,28 @@ export const parseTitleKey = (
   if (tokens.length < 4) return empty;
 
   const [authenticity, yearToken, relationshipCode, ...rest] = tokens;
+  const correspondentCode = rest.join(" ");
 
+  if (typeof authenticity !== "string") return empty;
+  if (typeof relationshipCode !== "string") return empty;
+  if (typeof correspondentCode !== "string") return empty;
   if (typeof yearToken !== "string") return empty;
+
   const parsedYear = parseYearToken(yearToken);
 
   return {
     raw,
-    authenticity: authenticity ?? null,
+    authenticity,
     year: parsedYear.year,
     yearRaw: parsedYear.raw,
     yearIsDecadeSuggestion: parsedYear.isDecadeSuggestion,
     yearIsUncertain: parsedYear.isUncertain,
-    relationshipCode: relationshipCode ?? null,
-    correspondentCode: rest.join(" ") || null,
+    relationshipCode,
+    correspondentCode,
     parseOk: parsedYear.year !== null,
   };
 };
-
+/*
 const test = [
   "A 1520S? FO JZOUCHE",
   "A 1520S FO EFITTON",
@@ -97,12 +102,6 @@ const test = [
   "A 1530? T JBARWICK",
 ];
 
-/*
-for (const i in test) {
-  console.log(test[i]);
-  console.log(parseTitleKey(test[i]));
-}
- */
 let errors = 0;
 
 test.forEach((element) => {
@@ -112,3 +111,4 @@ test.forEach((element) => {
   console.log(parsedElement);
 });
 console.log(errors);
+ */
